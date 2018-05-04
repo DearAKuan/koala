@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yzbubble.koala.infrastructure.pg.PgFieldMetadataMapper">
+    <resultMap id="BaseResultMap" type="com.yzbubble.koala.domain.FieldMetadata">
+        <result column="name" jdbcType="VARCHAR" property="name"></result>
+        <result column="type" jdbcType="VARCHAR" property="type"></result>
+        <result column="origin_type" jdbcType="VARCHAR" property="originType"></result>
+        <result column="description" jdbcType="VARCHAR" property="description"></result>
+        <result column="not_null" jdbcType="VARCHAR" property="notNull"></result>
+        <result column="length" jdbcType="INTEGER" property="length"></result>
+        <result column="var_length" jdbcType="INTEGER" property="varLength"></result>
+    </resultMap>
+    <select id="select" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+            a.attnum AS order,
+            a.attname AS name,
+            CASE
+            a.atttypid
+            WHEN 1114 THEN
+                'timestamp(6)'
+            WHEN 1043 THEN
+                'varchar(' || a.atttypmod - 4 || ')'
+            ELSE t.typname
+            END AS type,
+            t.typname AS origin_type,
+            a.attnotnull AS not_null,
+            d.description AS description,
+            a.attlen length,
+            a.atttypmod AS var_length
+        FROM
+            pg_attribute a
+            LEFT JOIN pg_class c ON a.attrelid = c.oid
+            LEFT JOIN pg_description d ON a.attrelid = d.objoid AND a.attnum = d.objsubid
+            LEFT JOIN pg_type t ON a.atttypid = t.oid
+        WHERE
+            c.relname = #{tableName}
+            AND a.attnum > 0
+        ORDER BY
+            a.attnum
+    </select>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yzbubble.koala.infrastructure.mssql.MssqlFieldMetadataMapper">
+    <resultMap id="BaseResultMap" type="com.yzbubble.koala.domain.FieldMetadata">
+        <result column="name" jdbcType="VARCHAR" property="name"></result>
+        <result column="type" jdbcType="VARCHAR" property="type"></result>
+        <result column="origin_type" jdbcType="VARCHAR" property="originType"></result>
+        <result column="description" jdbcType="VARCHAR" property="description"></result>
+        <result column="not_null" jdbcType="VARCHAR" property="notNull"></result>
+        <result column="length" jdbcType="INTEGER" property="length"></result>
+    </resultMap>
+    <select id="select" parameterType="java.lang.String" resultMap="BaseResultMap">
+    <![CDATA[
+        SELECT
+            A.colorder [ORDER],
+            A.NAME NAME,
+            isnull( G.[VALUE], '' ) description,
+            CASE
+                WHEN COLUMNPROPERTY ( A.id, A.NAME, 'IsIdentity' ) = 1 THEN
+                't' ELSE 'f'
+                END [unique],
+            CASE
+                WHEN EXISTS (
+                    SELECT
+                    1
+                    FROM
+                    sysobjects
+                    WHERE
+                    xtype = 'PK'
+                    AND parent_obj = A.id
+                    AND NAME IN ( SELECT NAME FROM sysindexes WHERE indid IN ( SELECT indid FROM sysindexkeys WHERE id = A.id AND colid = A.colid ) )
+                )
+                THEN 't' ELSE 'f'
+                END primary_key,
+            B.NAME origin_type,
+            CASE
+                B.NAME
+                WHEN 'varchar' THEN CONCAT('varchar(', A.length, ')' )
+                WHEN 'numeric' THEN CONCAT('numeric(', COLUMNPROPERTY(A.id, A.NAME, 'PRECISION'), ',', ISNULL( COLUMNPROPERTY ( A.id, A.NAME, 'Scale' ), 0 ),')')
+                WHEN 'datetime2' THEN CONCAT( 'datetime2(', ISNULL( COLUMNPROPERTY ( A.id, A.NAME, 'Scale' ), 0 ), ')' ) ELSE B.name
+                END type,
+            A.Length length,
+            COLUMNPROPERTY(A.id, A.NAME, 'PRECISION') precision, ISNULL(COLUMNPROPERTY(A.id, A.NAME, 'Scale'), 0) scale,
+            CASE
+                WHEN A.isnullable = 1 THEN 'f' ELSE 't'
+                END not_null,
+            ISNULL( E.Text, '' ) default_value
+        FROM
+            syscolumns A
+            LEFT JOIN systypes B ON A.xusertype = B.xusertype
+            INNER JOIN sysobjects D ON A.id = D.id AND D.xtype = 'U' AND D.NAME <> 'dtproperties'
+            LEFT JOIN syscomments E ON A.cdefault = E.id
+            LEFT JOIN sys.extended_properties G ON A.id = G.major_id AND A.colid = G.minor_id
+            LEFT JOIN sys.extended_properties F ON D.id = F.major_id AND F.minor_id = 0
+        WHERE
+            D.name = #{tableName}
+        ORDER BY
+            A.colorder
+    ]]>
+    </select>
+</mapper>
