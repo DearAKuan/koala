@@ -8,7 +8,7 @@ import java.util.Objects;
 public class PlatformFieldMetadataDaoFactory {
     public static PlatformFieldMetadataDao get() {
         String driver = PropertiesHolder.getProperty("driver");
-        Objects.requireNonNull(driver, "数据库驱动\"Driver\"配置不能为空");
+        Objects.requireNonNull(driver, "数据库驱动\"driver\"配置不能为空");
         driver = driver.trim();
         switch (driver) {
             case "com.microsoft.sqlserver.jdbc.SQLServerDriver":
